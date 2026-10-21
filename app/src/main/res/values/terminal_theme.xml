@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ShinLauncher-i3: terminal home screen theme -->
+    <style name="TerminalTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#FF070B12</item>
+        <item name="android:statusBarColor">#FF070B12</item>
+        <item name="android:navigationBarColor">#FF070B12</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+</resources>

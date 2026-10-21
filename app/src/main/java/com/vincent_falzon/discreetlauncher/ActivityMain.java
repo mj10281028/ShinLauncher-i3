@@ -520,6 +520,10 @@ public class ActivityMain extends AppCompatActivity implements View.OnClickListe
 
 		// Update the system bars flags
 		getWindow().getDecorView().setSystemUiVisibility(immersive_mode_flag | dark_icons_flag) ;
+
+		// ShinLauncher-i3: the home screen is now the terminal, this activity only prepares the shared data
+		startActivity(new Intent(this, TerminalActivity.class)) ;
+		finish() ;
 	}
 
 
