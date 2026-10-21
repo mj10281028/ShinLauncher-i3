@@ -141,6 +141,7 @@ public class TerminalActivity extends AppCompatActivity
 	// Views
 	private TextView tvWorkspaces ;
 	private TextView tvNet ;
+	private TextView tvSelection ;
 	private TextView tvHint ;
 	private LinearLayout terminal ;
 	private ScrollView scroll ;
@@ -225,6 +226,13 @@ public class TerminalActivity extends AppCompatActivity
 				@Override
 				public boolean onDown(MotionEvent event)
 				{
+					return true ;
+				}
+
+				@Override
+				public boolean onDoubleTap(MotionEvent event)
+				{
+					openSelectedWorkspace() ;
 					return true ;
 				}
 
@@ -440,13 +448,20 @@ public class TerminalActivity extends AppCompatActivity
 		divider.setBackgroundColor(COLOR_LINE) ;
 		root.addView(divider, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))) ;
 
+		// Selected workspace and its application
+		tvSelection = makeText(11, COLOR_TEXT) ;
+		tvSelection.setSingleLine(true) ;
+		tvSelection.setEllipsize(TextUtils.TruncateAt.END) ;
+		tvSelection.setPadding(dp(10), dp(3), dp(10), dp(3)) ;
+		root.addView(tvSelection, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)) ;
+
 		// Content: clean home hint or terminal
 		FrameLayout content = new FrameLayout(this) ;
 		root.addView(content, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)) ;
 
 		tvHint = makeText(12, COLOR_DIM) ;
 		tvHint.setGravity(Gravity.CENTER) ;
-		tvHint.setText("↑ terminal   ·   appui long : clavier   ·   ← → : bureaux") ;
+		tvHint.setText("↑ terminal   ·   appui long : clavier   ·   ← → : bureaux   ·   double tap : ouvrir") ;
 		content.addView(tvHint, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)) ;
 
 		terminal = new LinearLayout(this) ;
@@ -785,7 +800,7 @@ public class TerminalActivity extends AppCompatActivity
 			case "help" :
 				println("<nom d'app>        lancer (↵ = 1er choix, ⇥ = compléter)\n"
 					+ "ls [fav|dossiers|<dossier>]   lister les apps\n"
-					+ "ws · close N       bureaux (swipe ← → pour changer)\n"
+					+ "ws · close [N|all] bureaux (swipe ← → : choisir, double tap : ouvrir)\n"
 					+ "web <mots|site>    DuckDuckGo ou ouvrir un site\n"
 					+ "alias a=cmd · unalias a\n"
 					+ "fav · dossiers · masquer · menu · refresh\n"
@@ -1115,20 +1130,19 @@ public class TerminalActivity extends AppCompatActivity
 
 
 	/**
-	 * Move the selection to the previous/next workspace, the app opens after a short pause.
+	 * Move the selection to the previous/next workspace (double tap opens its app, "close" frees it).
 	 */
 	private void switchWorkspace(int delta)
 	{
 		selectedWorkspace = ((selectedWorkspace - 1 + delta + WORKSPACES) % WORKSPACES) + 1 ;
 		refreshWorkspacesBar() ;
-		handler.removeCallbacks(workspaceLauncher) ;
-		handler.postDelayed(workspaceLauncher, WS_SWITCH_DELAY_MS) ;
 	}
 
 
 	private void openSelectedWorkspace()
 	{
 		if(selectedWorkspace < 2 || workspaces[selectedWorkspace] == null) return ;
+		handler.removeCallbacks(workspaceLauncher) ;
 		Application application = findApplication(workspaces[selectedWorkspace]) ;
 		if(application == null)
 			{
@@ -1156,9 +1170,19 @@ public class TerminalActivity extends AppCompatActivity
 
 	private void commandClose(String argument)
 	{
+		String text = argument.trim() ;
+		if(text.equals("all"))
+			{
+				for(int i = 2 ; i <= WORKSPACES ; i++) workspaces[i] = null ;
+				selectedWorkspace = 1 ;
+				saveWorkspaces() ;
+				refreshWorkspacesBar() ;
+				println("tous les bureaux sont libérés", COLOR_TEXT) ;
+				return ;
+			}
 		try
 		{
-			int number = Integer.parseInt(argument.trim()) ;
+			int number = text.isEmpty() ? selectedWorkspace : Integer.parseInt(text) ;
 			if(number < 2 || number > WORKSPACES) throw new NumberFormatException() ;
 			workspaces[number] = null ;
 			saveWorkspaces() ;
@@ -1168,7 +1192,7 @@ public class TerminalActivity extends AppCompatActivity
 		}
 		catch(NumberFormatException exception)
 		{
-			println("usage : close N  (N de 2 à " + WORKSPACES + ")", COLOR_ERROR) ;
+			println("usage : close (bureau sélectionné) · close N (2 à " + WORKSPACES + ") · close all", COLOR_ERROR) ;
 		}
 	}
 
@@ -1189,6 +1213,18 @@ public class TerminalActivity extends AppCompatActivity
 					start, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) ;
 		}
 		tvWorkspaces.setText(builder) ;
+
+		// Describe the selected workspace
+		String description ;
+		if(selectedWorkspace == 1) description = "bureau 1 · terminal" ;
+			else if(workspaces[selectedWorkspace] == null) description = "bureau " + selectedWorkspace + " · libre" ;
+			else
+			{
+				Application application = findApplication(workspaces[selectedWorkspace]) ;
+				description = "bureau " + selectedWorkspace + " · " + (application == null ? "?" : application.getDisplayName())
+					+ "   (double tap : ouvrir · close : libérer)" ;
+			}
+		tvSelection.setText(description) ;
 	}
 
 
